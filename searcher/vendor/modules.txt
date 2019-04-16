@@ -1,0 +1,13 @@
+# github.com/hscells/trecresults v0.0.0-20190325033736-14d24278e775
+github.com/hscells/trecresults
+# github.com/mailru/easyjson v0.0.0-20190312143242-1de009706dbe
+github.com/mailru/easyjson
+github.com/mailru/easyjson/jlexer
+github.com/mailru/easyjson/jwriter
+github.com/mailru/easyjson/buffer
+# github.com/olivere/elastic/v7 v7.0.0
+github.com/olivere/elastic/v7
+github.com/olivere/elastic/v7/config
+github.com/olivere/elastic/v7/uritemplates
+# github.com/pkg/errors v0.8.1
+github.com/pkg/errors

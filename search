@@ -1,0 +1,16 @@
+#!/usr/bin/env python3
+
+import argparse
+import subprocess
+
+print("Searching...")
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--collection", required=True, type=str, help="the name of the collection")
+parser.add_argument("--topic", required=True, type=str, help="the name of the topic file")
+parser.add_argument("--topic_format", required=True, type=str, help="the format of the topic file")
+parser.add_argument("--top_k", required=True, type=str, help="the number of results for top-k retrieval")
+
+args, unknown = parser.parse_known_args()
+
+subprocess.run("./search.sh {} {} {} {}".format(args.collection, args.topic, args.topic_format, args.top_k), shell=True)
