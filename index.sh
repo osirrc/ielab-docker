@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
 
 # The name of the collection
-#COLLECTION=/input/collections/$1
-COLLECTION=data/$1
+COLLECTION=/input/collections/$1
 
 # Start elasticsearch if it is not already started.
 if [[ -n "$(pgrep java)" ]]; then

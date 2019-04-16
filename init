@@ -4,10 +4,10 @@
 VERSION=7.0.0
 
 # Download and extract the elasticsearch archive.
-#curl -o elasticsearch-${VERSION}-linux-x86_64.tar.gz https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-${VERSION}-linux-x86_64.tar.gz
-#tar -xf elasticsearch-${VERSION}-linux-x86_64.tar.gz
-#rm elasticsearch-${VERSION}-linux-x86_64.tar.gz
-#mv elasticsearch-${VERSION} elasticsearch
+curl -o elasticsearch-${VERSION}-linux-x86_64.tar.gz https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-${VERSION}-linux-x86_64.tar.gz
+tar -xf elasticsearch-${VERSION}-linux-x86_64.tar.gz
+rm elasticsearch-${VERSION}-linux-x86_64.tar.gz
+mv elasticsearch-${VERSION} elasticsearch
 
 # Build the collection parser program.
 cd cparser
