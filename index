@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 
 import argparse
-import os
+import json
 import subprocess
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--collections", nargs="+", type=str, required=True, help="the collection names")
+parser.add_argument("--json", type=json.loads, required=True, help="the json input")
 
 args, unknown = parser.parse_known_args()
 
-# Iterate over the [name]=[path] pairs
-for name in args.collections:
-	subprocess.run("./index.sh " + name, shell=True)
+# Iterate over the collections
+for collection in args.json["collections"]:
+	subprocess.run("./index.sh " + collection["path"], shell=True)
