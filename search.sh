@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 COLLECTION=$1
-TOPIC=/input/topics/$2
+TOPIC=$2
 TOPIC_FORMAT=$3
 TOP_K=$4
 

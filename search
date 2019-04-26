@@ -1,16 +1,14 @@
 #!/usr/bin/env python3
 
 import argparse
+import json
 import subprocess
 
 print("Searching...")
 
 parser = argparse.ArgumentParser()
-parser.add_argument("--collection", required=True, type=str, help="the name of the collection")
-parser.add_argument("--topic", required=True, type=str, help="the name of the topic file")
-parser.add_argument("--topic_format", required=True, type=str, help="the format of the topic file")
-parser.add_argument("--top_k", required=True, type=str, help="the number of results for top-k retrieval")
+parser.add_argument("--json", type=json.loads, required=True, help="the json input")
 
 args, unknown = parser.parse_known_args()
 
-subprocess.run("./search.sh {} {} {} {}".format(args.collection, args.topic, args.topic_format, args.top_k), shell=True)
+subprocess.run("./search.sh {} {} {} {}".format(args.json["collection"]["name"], args.json["topic"]["path"], args.json["topic"]["format"], args.json["top_k"]), shell=True)
