@@ -110,16 +110,16 @@ func main() {
 	)
 
 	collection := os.Args[1]
-	topK, err := strconv.Atoi(os.Args[3])
-	if err != nil {
-		log.Fatalln(err)
-	}
 	topicFormat := TopicFormat(os.Args[2])
 	switch topicFormat {
 	case TREC:
 		// There is only one format supported currently.
 	default:
 		log.Fatalf("%s is not a known topic format", topicFormat)
+	}
+	topK, err := strconv.Atoi(os.Args[3])
+	if err != nil {
+		log.Fatalln(err)
 	}
 
 	client, err := elastic.NewClient(elastic.SetURL("http://localhost:9200"))

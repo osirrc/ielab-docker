@@ -1,16 +1,15 @@
 #!/usr/bin/env bash
 
-COLLECTION=$1
-TOPIC=$2
+cd /
+
+sudo -u es ./elasticsearch/bin/elasticsearch -d
+./eswait.sh
+
+# Setup variables.
+INDEX=$1
+TOPIC_PATH=$2
 TOPIC_FORMAT=$3
 TOP_K=$4
 
-
-# Start elasticsearch if it is not already started.
-if [[ -n "$(pgrep java)" ]]; then
-	echo "elasticsearch already started, not starting again."
-else
-   ./elasticsearch/bin/elasticsearch -d
-fi
-
-cat ${TOPIC} | ./ielab_searcher ${COLLECTION} ${TOPIC_FORMAT} ${TOP_K} > ${COLLECTION}-${TOP_K}
+# Perform the search.
+cat ${TOPIC_PATH} | ./ielab_tsearcher ${INDEX} ${TOPIC_FORMAT} ${TOP_K} > ${INDEX}-${TOP_K}

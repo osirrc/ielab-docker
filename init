@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Set this variable to the specific elasticsearch version to be downloaded.
-VERSION=7.0.0
+VERSION=7.1.0
 
 # Download and extract the elasticsearch archive.
 curl -o elasticsearch-${VERSION}-linux-x86_64.tar.gz https://artifacts.elastic.co/downloads/elasticsearch/elasticsearch-${VERSION}-linux-x86_64.tar.gz
@@ -9,13 +9,11 @@ tar -xf elasticsearch-${VERSION}-linux-x86_64.tar.gz
 rm elasticsearch-${VERSION}-linux-x86_64.tar.gz
 mv elasticsearch-${VERSION} elasticsearch
 
+chown -R es:es elasticsearch
+
 # Build the collection parser program.
 cd cparser
-go build -mod=vendor -o ../ielab_cparser main.go
+go build -v -mod=vendor -o ../ielab_cparser main.go
 # Build the searcher program.
-cd ../searcher
-go build -mod=vendor -o ../ielab_searcher main.go
-cd ../
-
-# Start elasticsearch in the background.
-./elasticsearch/bin/elasticsearch -d
+cd ../tsearcher
+go build -v -mod=vendor -o ../ielab_tsearcher main.go

@@ -1,0 +1,8 @@
+# github.com/datatogether/warc v0.0.0-20181218141806-955ff5e56e7f
+github.com/datatogether/warc
+# github.com/google/uuid v1.0.0
+github.com/google/uuid
+# github.com/pborman/uuid v1.2.0
+github.com/pborman/uuid
+# github.com/pkg/errors v0.8.1
+github.com/pkg/errors

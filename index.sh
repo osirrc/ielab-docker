@@ -1,18 +1,21 @@
 #!/usr/bin/env bash
 
-# The path of the collection
-COLLECTION=$1
+cd /
 
-# Start elasticsearch if it is not already started.
-if [[ -n "$(pgrep java)" ]]; then
-	echo "elasticsearch already started, not starting again."
-else
-   ./elasticsearch/bin/elasticsearch -d
-fi
+# Setup variables.
+COLLECTION_PATH=$1
+INDEX=$2
+COLLECTION_FORMAT=$3
 
-for filename in ${COLLECTION}/*; do
-    cat ${filename} | ./ielab_cparser $1 trecweb > requests
+sudo -u es ./elasticsearch/bin/elasticsearch -d
+./eswait.sh
+
+# Iterate over each file in the collection path, parsing each
+# one as it sees it, then bulk indexing the file.
+for filename in ${COLLECTION_PATH}/*; do
+    cat ${filename} | ./ielab_cparser ${INDEX} ${COLLECTION_FORMAT} trecweb > requests
     curl -s -H "Content-Type: application/x-ndjson" -X POST localhost:9200/_bulk --data-binary "@requests"; echo
 done
 
+# Tidy up the file containing the bulk request at the end.
 rm requests

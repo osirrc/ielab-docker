@@ -8,7 +8,9 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"github.com/datatogether/warc"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"regexp"
@@ -36,6 +38,8 @@ const (
 	TRECWEB  CollectionFormat = "trecweb"
 	TRECTEXT                  = "trectext"
 	WashPost                  = "wp"
+	WARC                      = "warc"
+	JSON                      = "json"
 )
 
 type TRECWEBDoc struct {
@@ -139,18 +143,41 @@ func ParseWP(r io.Reader) ([]byte, error) {
 	return buff.Bytes(), err
 }
 
+func ParseWARC(r io.Reader) ([]byte, error) {
+	reader, err := warc.NewReader(r)
+	if err != nil {
+		return nil, err
+	}
+	records, err := reader.ReadAll()
+	if err != nil {
+		return nil, err
+	}
+
+	buff := new(bytes.Buffer)
+	err = json.NewEncoder(buff).Encode(records)
+	if err != nil {
+		return nil, err
+	}
+
+	return buff.Bytes(), nil
+}
+
+func ParseJSON(r io.Reader) ([]byte, error) {
+	return ioutil.ReadAll(r)
+}
+
 func main() {
 	var (
-		format CollectionFormat = "trecweb"
-		parser CollectionParser
+		format CollectionFormat = "trecweb" // The default collection format.
+		parser CollectionParser             // The method of parsing to use.
 		buff   = new(bytes.Buffer)          // Buffer to store the current document.
-		state  = Skipping                   // State the collection reader is in.
+		state  = Skipping                   // State the collectionPath reader is in.
 		re     = regexp.MustCompile("&.*;") // Regex to filter out XML entities.
 		i      int                          // Variable to track the document id.
 	)
 
-	// The name of the collection to index.
-	collection := os.Args[1]
+	// The name and path of the collection.
+	collectionName := os.Args[1]
 
 	// Determine the parser for collections to use.
 	format = CollectionFormat(os.Args[2])
@@ -161,11 +188,15 @@ func main() {
 		parser = ParseTRECWEB
 	case WashPost:
 		parser = ParseWP
+	case WARC:
+		parser = ParseWARC
+	case JSON:
+		parser = ParseJSON
 	default:
 		log.Fatalln(fmt.Sprintf("%s is not a valid collection format", format))
 	}
 
-	// Read and parse the collection.
+	// Read and parse the collectionPath.
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
 		t := re.ReplaceAllString(scanner.Text(), "")
@@ -187,7 +218,7 @@ func main() {
 				log.Fatalln(err)
 			}
 			_, err = os.Stdout.WriteString(fmt.Sprintf(`{ "index": { "_index": "%s", "_id": %d } }
-%s`, collection, i, data))
+%s`, collectionName, i, data))
 			if err != nil {
 				log.Fatalln(err)
 			}
