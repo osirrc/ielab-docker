@@ -73,17 +73,18 @@ type WaPostArticle struct {
 	Type          string `json:"type"`
 	Source        string `json:"source"`
 	Contents      []struct {
-		Type        string `json:"type"`
-		Subtype     string `json:"subtype"`
-		Mime        string `json:"mime"`
-		Content     string `json:"content,omitempty"`
-		FullCaption string `json:"full_caption,omitempty"`
-		ImageURL    string `json:"imageURL,omitempty"`
-		ImageHeight int    `json:"image_height,omitempty"`
-		ImageWidth  int    `json:"image_width,omitempty"`
-		Blurb       string `json:"blurb"`
-		Role        string `json:"role"`
-		Bio         string `json:"bio"`
+		Type        string      `json:"type"`
+		Subtype     string      `json:"subtype"`
+		Mime        string      `json:"mime"`
+		Content     interface{} `json:"content,omitempty"`
+		Text        string      `json:"text,omitempty"`
+		FullCaption string      `json:"full_caption,omitempty"`
+		ImageURL    string      `json:"imageURL,omitempty"`
+		ImageHeight int         `json:"image_height,omitempty"`
+		ImageWidth  int         `json:"image_width,omitempty"`
+		Blurb       string      `json:"blurb"`
+		Role        string      `json:"role"`
+		Bio         string      `json:"bio"`
 	} `json:"contents"`
 }
 
@@ -139,11 +140,17 @@ func ParseWP(r io.Reader) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	for i, c := range d.Contents {
+		d.Contents[i].Text = fmt.Sprintf("%v", c.Content)
+		d.Contents[i].Content = ""
+	}
+
 	err = json.NewEncoder(buff).Encode(&d)
 	return buff.Bytes(), err
 }
 
-func ParseWARC(r io.Reader) ([]byte, error) {
+func ParseWARC(r io.Reader) ([][]byte, error) {
 	reader, err := warc.NewReader(r)
 	if err != nil {
 		return nil, err
@@ -153,13 +160,18 @@ func ParseWARC(r io.Reader) ([]byte, error) {
 		return nil, err
 	}
 
-	buff := new(bytes.Buffer)
-	err = json.NewEncoder(buff).Encode(records)
-	if err != nil {
-		return nil, err
+	recs := make([][]byte, len(records))
+
+	for i, rec := range records {
+		buff := new(bytes.Buffer)
+		err = json.NewEncoder(buff).Encode(rec)
+		if err != nil {
+			return nil, err
+		}
+		recs[i] = buff.Bytes()
 	}
 
-	return buff.Bytes(), nil
+	return recs, nil
 }
 
 func ParseJSON(r io.Reader) ([]byte, error) {
@@ -168,12 +180,10 @@ func ParseJSON(r io.Reader) ([]byte, error) {
 
 func main() {
 	var (
-		format CollectionFormat = "trecweb" // The default collection format.
-		parser CollectionParser             // The method of parsing to use.
-		buff   = new(bytes.Buffer)          // Buffer to store the current document.
-		state  = Skipping                   // State the collectionPath reader is in.
-		re     = regexp.MustCompile("&.*;") // Regex to filter out XML entities.
-		i      int                          // Variable to track the document id.
+		format CollectionFormat = "trecweb"                  // The default collection format.
+		buff                    = new(bytes.Buffer)          // Buffer to store the current document.
+		state                   = Skipping                   // State the collectionPath reader is in.
+		re                      = regexp.MustCompile("&.*;") // Regex to filter out XML entities.
 	)
 
 	// The name and path of the collection.
@@ -183,46 +193,76 @@ func main() {
 	format = CollectionFormat(os.Args[2])
 	switch format {
 	case TRECWEB:
-		parser = ParseTRECWEB
 	case TRECTEXT:
-		parser = ParseTRECWEB
 	case WashPost:
-		parser = ParseWP
 	case WARC:
-		parser = ParseWARC
 	case JSON:
-		parser = ParseJSON
 	default:
 		log.Fatalln(fmt.Sprintf("%s is not a valid collection format", format))
 	}
 
-	// Read and parse the collectionPath.
-	scanner := bufio.NewScanner(os.Stdin)
-	for scanner.Scan() {
-		t := re.ReplaceAllString(scanner.Text(), "")
-		if state == Skipping && t == StartToken {
-			state = Reading
-		}
+	if format == TRECTEXT || format == TRECWEB {
+		parser := ParseTRECWEB
 
-		if state == Reading {
-			_, err := buff.WriteString(t)
+		// Read and parse the collectionPath.
+		scanner := bufio.NewScanner(os.Stdin)
+		for scanner.Scan() {
+			t := re.ReplaceAllString(scanner.Text(), "")
+			if state == Skipping && t == StartToken {
+				state = Reading
+			}
+
+			if state == Reading {
+				_, err := buff.WriteString(t)
+				if err != nil {
+					log.Fatalln(err)
+				}
+			}
+
+			if state == Reading && t == EndToken {
+				state = Skipping
+				data, err := parser(buff)
+				if err != nil {
+					log.Fatalln(err)
+				}
+				_, err = os.Stdout.WriteString(fmt.Sprintf(`{ "index": { "_index": "%s" } }
+%s`, collectionName, data))
+				if err != nil {
+					log.Fatalln(err)
+				}
+			}
+		}
+	} else if format == WashPost {
+		data, err := ParseWP(os.Stdin)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		_, err = os.Stdout.WriteString(fmt.Sprintf(`{ "index": { "_index": "%s" } }
+%s`, collectionName, data))
+		if err != nil {
+			log.Fatalln(err)
+		}
+	} else if format == WARC {
+		records, err := ParseWARC(os.Stdin)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		for _, data := range records {
+			_, err = os.Stdout.WriteString(fmt.Sprintf(`{ "index": { "_index": "%s" } }
+%s`, collectionName, data))
 			if err != nil {
 				log.Fatalln(err)
 			}
 		}
-
-		if state == Reading && t == EndToken {
-			state = Skipping
-			data, err := parser(buff)
-			if err != nil {
-				log.Fatalln(err)
-			}
-			_, err = os.Stdout.WriteString(fmt.Sprintf(`{ "index": { "_index": "%s", "_id": "%d" } }
-%s`, collectionName, i, data))
-			if err != nil {
-				log.Fatalln(err)
-			}
-			i++
+	} else if format == JSON {
+		data, err := ParseJSON(os.Stdin)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		_, err = os.Stdout.WriteString(fmt.Sprintf(`{ "index": { "_index": "%s" } }
+%s`, collectionName, data))
+		if err != nil {
+			log.Fatalln(err)
 		}
 	}
 }

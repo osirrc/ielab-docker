@@ -7,7 +7,7 @@ COLLECTION_FORMAT=$3
 
 ./eswait.sh
 
-curl -s -H "Content-Type: application/json" -X PUT localhost:9200/${INDEX}?wait_for_active_shards=1 -d '{"settings": {"number_of_shards": 1}}'
+curl -s -H "Content-Type: application/json" -X PUT localhost:9200/${INDEX}?wait_for_active_shards=1 -d '{"settings": {"number_of_shards": 1}}'; echo
 
 # Iterate over each file in the collection path, parsing each
 # one as it sees it, then bulk indexing the file.
