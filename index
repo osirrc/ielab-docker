@@ -11,4 +11,4 @@ args, unknown = parser.parse_known_args()
 
 # Iterate over the collections
 for collection in args.json["collections"]:
-	subprocess.run("./index.sh {} {}".format(collection["path"], collection["name"]), shell=True)
+	subprocess.run("./index.sh {} {} {}".format(collection["path"], collection["name"], collection["format"]), shell=True)

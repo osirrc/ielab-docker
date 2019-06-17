@@ -217,7 +217,7 @@ func main() {
 			if err != nil {
 				log.Fatalln(err)
 			}
-			_, err = os.Stdout.WriteString(fmt.Sprintf(`{ "index": { "_index": "%s", "_id": %d } }
+			_, err = os.Stdout.WriteString(fmt.Sprintf(`{ "index": { "_index": "%s", "_id": "%d" } }
 %s`, collectionName, i, data))
 			if err != nil {
 				log.Fatalln(err)

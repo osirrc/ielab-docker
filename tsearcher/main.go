@@ -127,6 +127,8 @@ func main() {
 		log.Fatalln(err)
 	}
 
+	queryRe := regexp.MustCompile("[^a-zA-Z0-9_ ]+")
+
 	// Read and parse the collection.
 	scanner := bufio.NewScanner(os.Stdin)
 	for scanner.Scan() {
@@ -149,11 +151,16 @@ func main() {
 			if err != nil {
 				log.Fatalln(err)
 			}
+
+			query := queryRe.ReplaceAllString(topic.Title, "")
+
+			log.Printf("index: %s, format: %s, query: %s\n", collection, topicFormat, query)
+
 			// Execute the topic.
 			search, err := client.
 				Search(collection).
 				Size(topK).
-				Query(elastic.NewQueryStringQuery(topic.Title)).
+				Query(elastic.NewQueryStringQuery(query)).
 				Do(context.Background())
 			if err != nil {
 				log.Fatalln(err)
