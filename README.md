@@ -6,7 +6,7 @@ This is the docker image for Elasticsearch conforming to the OSIRRC jig for the 
 
 Currently supported:
 
- - test collections: `core17`, `core18`, `cw09b`*, `cw12b`*, `robust04` 
+ - test collections: `core17`, `core18`, `cw09b`\*, `cw12b`\*, `robust04` 
  - hooks: `init`, `index`, `search`
  
 _* = not yet tested_
