@@ -48,14 +48,19 @@ type TRECWEBDoc struct {
 	DateTime string       `xml:"DATE_TIME,omitempty"`
 	DocNo    string       `xml:"DOCNO,omitempty"`
 	DocType  string       `xml:"DOCTYPE,omitempty"`
-	Header   string       `xml:"HEADER"`
+	Header   string       `xml:"HEADER,omitempty"`
 	Trailer  string       `xml:"TRAILER,omitempty"`
+	Text     InnerResult  `xml:"TEXT"`
+}
+
+type InnerResult struct {
+	Value string `xml:",innerxml"`
 }
 
 type TRECWEBBody struct {
 	XMLName  xml.Name     `xml:"BODY,omitempty"`
-	Headline string       `xml:"HEADLINE"`
-	Slug     string       `xml:"SLUG"`
+	Headline string       `xml:"HEADLINE,omitempty"`
+	Slug     string       `xml:"SLUG,omitempty"`
 	Text     *TRECWEBText `xml:"TEXT,omitempty"`
 }
 
@@ -103,24 +108,35 @@ func ParseTRECWEB(r io.Reader) ([]byte, error) {
 	}
 
 	// Transform the doc into a TRECWEBDoc and clean it up.
-	j := struct {
-		Headline string
-		Slug     string
-		Text     string
-		DateTime string
-		DocNo    string
-		DocType  string
-		Header   string
-		Trailer  string
-	}{
-		Headline: strings.TrimSpace(d.Body.Headline),
-		Slug:     strings.TrimSpace(d.Body.Slug),
-		Text:     strings.Join(d.Body.Text.P, " "),
-		DateTime: strings.TrimSpace(d.DateTime),
-		DocNo:    strings.TrimSpace(d.DocNo),
-		DocType:  strings.TrimSpace(d.DocType),
-		Header:   strings.TrimSpace(d.Header),
-		Trailer:  strings.TrimSpace(d.Trailer),
+	var j interface{}
+	if d.Body != nil { // If the document has a body tag, it's probably NYT.
+		j = struct {
+			Headline string
+			Slug     string
+			Text     string
+			DateTime string
+			DocNo    string
+			DocType  string
+			Header   string
+			Trailer  string
+		}{
+			Headline: strings.TrimSpace(d.Body.Headline),
+			Slug:     strings.TrimSpace(d.Body.Slug),
+			Text:     strings.Join(d.Body.Text.P, " "),
+			DateTime: strings.TrimSpace(d.DateTime),
+			DocNo:    strings.TrimSpace(d.DocNo),
+			DocType:  strings.TrimSpace(d.DocType),
+			Header:   strings.TrimSpace(d.Header),
+			Trailer:  strings.TrimSpace(d.Trailer),
+		}
+	} else { // Otherwise, just put everything into TEXT.
+		j = struct {
+			DocNo string
+			Text  string
+		}{
+			DocNo: strings.TrimSpace(d.DocNo),
+			Text:  strings.TrimSpace(d.Text.Value),
+		}
 	}
 
 	// Encode the TRECWEBDoc into raw JSON.
