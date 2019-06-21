@@ -10,7 +10,7 @@ COLLECTION_FORMAT=$3
 
 # The mounted collection folder is read-only, we need a writable folder.
 COLLECTION_PATH_WRITABLE=${COLLECTION_PATH}"-WRITABLE"
-echo "robust04 ... Copying files of directory ${COLLECTION_PATH} into ${COLLECTION_PATH_WRITABLE}"
+echo "Copying files of directory ${COLLECTION_PATH} into ${COLLECTION_PATH_WRITABLE}"
 cp -r ${COLLECTION_PATH} ${COLLECTION_PATH_WRITABLE}
 
 if [[ ${INDEX} == "robust04" ]]
@@ -29,6 +29,31 @@ then
     # Decompress.
     echo "robust04 ... Uncompressing"
     gunzip -v --suffix=".z" -r ${COLLECTION_PATH_WRITABLE}
+fi
+
+if [[ ${INDEX} == "core17" ]]
+then
+    rm -r ${COLLECTION_PATH_WRITABLE}/NYTcorpus/docs
+    rm -r ${COLLECTION_PATH_WRITABLE}/NYTcorpus/dtd
+    rm -r ${COLLECTION_PATH_WRITABLE}/NYTcorpus/tools
+    rm ${COLLECTION_PATH_WRITABLE}/NYTcorpus/index.html
+
+    find ${COLLECTION_PATH_WRITABLE} -name "*.tgz" -type f -exec mv '{}' '{}'.z \;
+    echo "core17 ... Uncompressing"
+    gunzip -v --suffix=".z" -r ${COLLECTION_PATH_WRITABLE}
+fi
+
+if [[ ${INDEX} == "core18" ]]
+then
+    rm ${COLLECTION_PATH_WRITABLE}/MD5SUMS
+    rm ${COLLECTION_PATH_WRITABLE}/README.md
+    rm -r ${COLLECTION_PATH_WRITABLE}/scripts
+
+    cd ${COLLECTION_PATH_WRITABLE}/data/
+    split -l 1 TREC_Washington_Post_collection.v2.jl
+    rm ${COLLECTION_PATH_WRITABLE}/data/TREC_Washington_Post_collection.v2.jl
+    ls ${COLLECTION_PATH_WRITABLE}/data
+    cd /
 fi
 
 # Wait for Elasticsearch.
