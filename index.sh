@@ -10,8 +10,9 @@ COLLECTION_FORMAT=$3
 
 # The mounted collection folder is read-only, we need a writable folder.
 COLLECTION_PATH_WRITABLE=${COLLECTION_PATH}"-WRITABLE"
-echo "Copying files of directory ${COLLECTION_PATH} into ${COLLECTION_PATH_WRITABLE}"
+echo "copying files of directory ${COLLECTION_PATH} into ${COLLECTION_PATH_WRITABLE}"
 cp -r ${COLLECTION_PATH} ${COLLECTION_PATH_WRITABLE}
+echo "done!"
 
 if [[ ${INDEX} == "robust04" ]]
 then
@@ -19,6 +20,11 @@ then
     rm -r ${COLLECTION_PATH_WRITABLE}/disk4/cr
     rm -r ${COLLECTION_PATH_WRITABLE}/disk4/dtds
     rm -r ${COLLECTION_PATH_WRITABLE}/disk5/dtds
+    rm -r ${COLLECTION_PATH_WRITABLE}/disk4/aux
+    rm ${COLLECTION_PATH_WRITABLE}/disk4/ft/readfrcg
+    rm ${COLLECTION_PATH_WRITABLE}/disk4/ft/readmeft
+    rm ${COLLECTION_PATH_WRITABLE}/disk4/fr94/readchg
+    rm ${COLLECTION_PATH_WRITABLE}/disk4/fr94/readmefr
 
     # Robust04 has a folder with `NAME.0z`, `NAME.1z` and `NAME.2z` files, simply using gunzip
     # is not an option as files are being overwritten (same name, different suffix);
@@ -58,6 +64,8 @@ fi
 
 # Wait for Elasticsearch.
 ./eswait.sh
+
+curl -s -H 'Content-Type: application/json' -X PUT localhost:9200/_settings -d '{ "index": { "refresh_interval": "60s"}}'
 
 # Create the index.
 curl -s -H "Content-Type: application/json" -X PUT localhost:9200/${INDEX}?wait_for_active_shards=1 -d '{"settings": {"number_of_shards": 1}}'; echo
