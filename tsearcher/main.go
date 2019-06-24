@@ -14,6 +14,7 @@ import (
 	"os"
 	"regexp"
 	"strconv"
+	"strings"
 )
 
 // Start and end tokens in TREC collections.
@@ -152,7 +153,7 @@ func main() {
 				log.Fatalln(err)
 			}
 
-			query := queryRe.ReplaceAllString(topic.Title, "")
+			query := strings.TrimSpace(queryRe.ReplaceAllString(topic.Title, ""))
 
 			log.Printf("index: %s, format: %s, query: %s\n", collection, topicFormat, query)
 

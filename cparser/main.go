@@ -15,6 +15,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"unicode/utf8"
 )
 
 // Start and end tokens in TREC collections.
@@ -103,6 +104,8 @@ func ParseTRECWEB(r io.Reader) ([]byte, error) {
 	// Decode the pseudo-xml data into a TRECWEBDoc.
 	err := xml.NewDecoder(r).Decode(&d)
 	if err != nil {
+		b, _ := ioutil.ReadAll(r)
+		fmt.Println(string(b))
 		panic(err)
 		return nil, err
 	}
@@ -194,12 +197,20 @@ func ParseJSON(r io.Reader) ([]byte, error) {
 	return ioutil.ReadAll(r)
 }
 
+func fixUtf(r rune) rune {
+	if r == utf8.RuneError {
+		return -1
+	}
+	return r
+}
+
 func main() {
 	var (
-		format CollectionFormat = "trecweb"                  // The default collection format.
-		buff                    = new(bytes.Buffer)          // Buffer to store the current document.
-		state                   = Skipping                   // State the collectionPath reader is in.
-		re                      = regexp.MustCompile("&.*;") // Regex to filter out XML entities.
+		format            CollectionFormat = "trecweb"                                      // The default collection format.
+		buff                               = new(bytes.Buffer)                              // Buffer to store the current document.
+		state                              = Skipping                                       // State the collectionPath reader is in.
+		xmlEntRe                           = regexp.MustCompile(`&.*;|&|\|`)                // Regex to filter out XML entities.
+		xmlUnquotedAttrRe                  = regexp.MustCompile(`[a-zA-Z]+=[a-zA-Z0-9\-]+`) // Regex to remove unquoted XML attributes.
 	)
 
 	// The name and path of the collection.
@@ -223,7 +234,9 @@ func main() {
 		// Read and parse the collectionPath.
 		scanner := bufio.NewScanner(os.Stdin)
 		for scanner.Scan() {
-			t := re.ReplaceAllString(scanner.Text(), "")
+			t := xmlEntRe.ReplaceAllString(scanner.Text(), "")
+			t = xmlUnquotedAttrRe.ReplaceAllString(t, "")
+			t = strings.Map(fixUtf, t)
 			if state == Skipping && t == StartToken {
 				state = Reading
 			}

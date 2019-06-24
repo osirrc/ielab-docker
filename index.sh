@@ -20,21 +20,23 @@ then
     rm -r ${COLLECTION_PATH_WRITABLE}/disk4/cr
     rm -r ${COLLECTION_PATH_WRITABLE}/disk4/dtds
     rm -r ${COLLECTION_PATH_WRITABLE}/disk5/dtds
-    rm -r ${COLLECTION_PATH_WRITABLE}/disk4/aux
-    rm ${COLLECTION_PATH_WRITABLE}/disk4/ft/readfrcg
-    rm ${COLLECTION_PATH_WRITABLE}/disk4/ft/readmeft
-    rm ${COLLECTION_PATH_WRITABLE}/disk4/fr94/readchg
-    rm ${COLLECTION_PATH_WRITABLE}/disk4/fr94/readmefr
+    rm -r ${COLLECTION_PATH_WRITABLE}/disk4/fr94/aux/
+    rm ${COLLECTION_PATH_WRITABLE}/disk4/ft/readfrcg.z
+    rm ${COLLECTION_PATH_WRITABLE}/disk4/ft/readmeft.z
+    rm ${COLLECTION_PATH_WRITABLE}/disk4/fr94/readchg.z
+    rm ${COLLECTION_PATH_WRITABLE}/disk4/fr94/readmefr.z
+    rm ${COLLECTION_PATH_WRITABLE}/disk5/latimes/readmela.txt
+    rm ${COLLECTION_PATH_WRITABLE}/disk5/latimes/readchg.txt
 
     # Robust04 has a folder with `NAME.0z`, `NAME.1z` and `NAME.2z` files, simply using gunzip
     # is not an option as files are being overwritten (same name, different suffix);
     # hacked solution: add ".z" to every single file in the collection path.
-    find ${COLLECTION_PATH_WRITABLE} -name "*.0z" -type f -exec mv '{}' '{}'.z \;
-    find ${COLLECTION_PATH_WRITABLE} -name "*.1z" -type f -exec mv '{}' '{}'.z \;
-    find ${COLLECTION_PATH_WRITABLE} -name "*.2z" -type f -exec mv '{}' '{}'.z \;
+    find ${COLLECTION_PATH_WRITABLE} -maxdepth 100 -name "*.0z" -type f -exec mv '{}' '{}'.z \;
+    find ${COLLECTION_PATH_WRITABLE} -maxdepth 100 -name "*.1z" -type f -exec mv '{}' '{}'.z \;
+    find ${COLLECTION_PATH_WRITABLE} -maxdepth 100 -name "*.2z" -type f -exec mv '{}' '{}'.z \;
     # Decompress.
     echo "robust04 ... Uncompressing"
-    gunzip -v --suffix=".z" -r ${COLLECTION_PATH_WRITABLE}
+    gunzip --suffix=".z" -r ${COLLECTION_PATH_WRITABLE}
 fi
 
 if [[ ${INDEX} == "core17" ]]
@@ -65,21 +67,44 @@ fi
 # Wait for Elasticsearch.
 ./eswait.sh
 
-curl -s -H 'Content-Type: application/json' -X PUT localhost:9200/_settings -d '{ "index": { "refresh_interval": "60s"}}'
 
 # Create the index.
-curl -s -H "Content-Type: application/json" -X PUT localhost:9200/${INDEX}?wait_for_active_shards=1 -d '{"settings": {"number_of_shards": 1}}'; echo
+curl -s -H "Content-Type: application/json" -X PUT localhost:9200/${INDEX}?wait_for_active_shards=1 -d '{"settings": {"number_of_shards": 4}}'; echo
+
+curl -s -H 'Content-Type: application/json' -X PUT localhost:9200/_settings -d '{ "index": { "refresh_interval": "60s"}}'; echo
 
 # Iterate over each file in the collection path, parsing each
 # one as it sees it, then bulk indexing the file.
 for filename in $(find ${COLLECTION_PATH_WRITABLE} -type f); do
-    echo ${filename}
+    printf ${filename}
+    # Try to parse the file.
     cat ${filename} | ./ielab_cparser ${INDEX} ${COLLECTION_FORMAT} trecweb > requests
-    curl -s -H "Content-Type: application/x-ndjson" -X POST localhost:9200/${INDEX}/_bulk?wait_for_active_shards=1\&refresh=wait_for --data-binary "@requests"; echo
+    if [[ ! -e requests ]]
+    then
+        # We were unable to parse the file...
+        printf "[X]\n"
+    else
+        # We have a parsed file, now try to index it.
+        STATUS=$(curl -s -w "%{http_code}" -o resp -H "Content-Type: application/x-ndjson" -X POST localhost:9200/${INDEX}/_bulk --data-binary "@requests")
+        if [[ ${STATUS} != 200 ]]
+        then
+            # Can't index the file, so what's the error?
+            printf "[X]\n"
+            cat resp
+            echo
+        else
+            # Okay, great, we indexed the file.
+            printf "[√]\n"
+        fi
+    fi
+
+    # Remove the requests file.
+    [[ -e requests ]] && rm requests
 done
 
-# Tidy up the file containing the bulk request at the end.
-rm requests
+# Remove the resp file.
+[[ -e resp ]] && rm resp
 
 curl -s -o /dev/null -X POST localhost:9200/${INDEX}/_refresh?pretty
+curl -s -X GET localhost:9200/_cluster/health?pretty
 curl -s -X GET localhost:9200/${INDEX}/_count?pretty | grep count | sed 's/["| |,]//g'
