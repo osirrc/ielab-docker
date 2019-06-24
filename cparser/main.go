@@ -40,7 +40,6 @@ const (
 	TRECTEXT                  = "trectext"
 	WashPost                  = "wp"
 	WARC                      = "warc"
-	JSON                      = "json"
 )
 
 type TRECWEBDoc struct {
@@ -96,7 +95,7 @@ type WaPostArticle struct {
 
 type CollectionParser func(r io.Reader) ([]byte, error)
 
-func ParseTRECWEB(r io.Reader) ([]byte, error) {
+func ParseTRECWEB(r io.Reader) ([]byte, string, error) {
 	var (
 		d    = TRECWEBDoc{}
 		buff = new(bytes.Buffer)
@@ -107,7 +106,7 @@ func ParseTRECWEB(r io.Reader) ([]byte, error) {
 		b, _ := ioutil.ReadAll(r)
 		fmt.Println(string(b))
 		panic(err)
-		return nil, err
+		return nil, "", err
 	}
 
 	// Transform the doc into a TRECWEBDoc and clean it up.
@@ -145,19 +144,19 @@ func ParseTRECWEB(r io.Reader) ([]byte, error) {
 	// Encode the TRECWEBDoc into raw JSON.
 	err = json.NewEncoder(buff).Encode(&j)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
-	return buff.Bytes(), nil
+	return buff.Bytes(), d.DocNo, nil
 }
 
-func ParseWP(r io.Reader) ([]byte, error) {
+func ParseWP(r io.Reader) ([]byte, string, error) {
 	var (
 		d    WaPostArticle
 		buff = new(bytes.Buffer)
 	)
 	err := json.NewDecoder(r).Decode(&d)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 
 	for i, c := range d.Contents {
@@ -166,31 +165,40 @@ func ParseWP(r io.Reader) ([]byte, error) {
 	}
 
 	err = json.NewEncoder(buff).Encode(&d)
-	return buff.Bytes(), err
+	return buff.Bytes(), d.Id, err
 }
 
-func ParseWARC(r io.Reader) ([][]byte, error) {
+func ParseWARC(r io.Reader) ([][]byte, []string, error) {
 	reader, err := warc.NewReader(r)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	records, err := reader.ReadAll()
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	recs := make([][]byte, len(records))
+	ids := make([]string, len(records))
 
 	for i, rec := range records {
 		buff := new(bytes.Buffer)
-		err = json.NewEncoder(buff).Encode(rec)
+		j := struct {
+			DocNo string `json:"_id"`
+			Text  string
+		}{
+			DocNo: strings.TrimSpace(rec.Headers.Get("WARC-TREC-ID")),
+			Text:  strings.TrimSpace(rec.Content.String()),
+		}
+		err = json.NewEncoder(buff).Encode(j)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		recs[i] = buff.Bytes()
+		ids[i] = rec.Headers.Get("WARC-TREC-ID")
 	}
 
-	return recs, nil
+	return recs, ids, nil
 }
 
 func ParseJSON(r io.Reader) ([]byte, error) {
@@ -223,7 +231,6 @@ func main() {
 	case TRECTEXT:
 	case WashPost:
 	case WARC:
-	case JSON:
 	default:
 		log.Fatalln(fmt.Sprintf("%s is not a valid collection format", format))
 	}
@@ -250,48 +257,38 @@ func main() {
 
 			if state == Reading && t == EndToken {
 				state = Skipping
-				data, err := parser(buff)
+				data, id, err := parser(buff)
 				if err != nil {
 					log.Fatalln(err)
 				}
-				_, err = os.Stdout.WriteString(fmt.Sprintf(`{ "index": { "_index": "%s" } }
-%s`, collectionName, data))
+				_, err = os.Stdout.WriteString(fmt.Sprintf(`{ "index": { "_index": "%s", "_id": "%s" } }
+%s`, collectionName, id, data))
 				if err != nil {
 					log.Fatalln(err)
 				}
 			}
 		}
 	} else if format == WashPost {
-		data, err := ParseWP(os.Stdin)
+		data, id, err := ParseWP(os.Stdin)
 		if err != nil {
 			log.Fatalln(err)
 		}
-		_, err = os.Stdout.WriteString(fmt.Sprintf(`{ "index": { "_index": "%s" } }
-%s`, collectionName, data))
+		_, err = os.Stdout.WriteString(fmt.Sprintf(`{ "index": { "_index": "%s", "_id": "%s"  } }
+%s`, collectionName, id, data))
 		if err != nil {
 			log.Fatalln(err)
 		}
 	} else if format == WARC {
-		records, err := ParseWARC(os.Stdin)
+		records, ids, err := ParseWARC(os.Stdin)
 		if err != nil {
 			log.Fatalln(err)
 		}
-		for _, data := range records {
-			_, err = os.Stdout.WriteString(fmt.Sprintf(`{ "index": { "_index": "%s" } }
-%s`, collectionName, data))
+		for i, data := range records {
+			_, err = os.Stdout.WriteString(fmt.Sprintf(`{ "index": { "_index": "%s", "_id": "%s"  } }
+%s`, collectionName, ids[i], data))
 			if err != nil {
 				log.Fatalln(err)
 			}
-		}
-	} else if format == JSON {
-		data, err := ParseJSON(os.Stdin)
-		if err != nil {
-			log.Fatalln(err)
-		}
-		_, err = os.Stdout.WriteString(fmt.Sprintf(`{ "index": { "_index": "%s" } }
-%s`, collectionName, data))
-		if err != nil {
-			log.Fatalln(err)
 		}
 	}
 }

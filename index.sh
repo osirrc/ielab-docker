@@ -90,12 +90,11 @@ for filename in $(find ${COLLECTION_PATH_WRITABLE} -type f); do
         then
             # Can't index the file, so what's the error?
             printf "[X]\n"
-            cat resp
-            echo
         else
             # Okay, great, we indexed the file.
             printf "[√]\n"
         fi
+        cat resp; echo
     fi
 
     # Remove the requests file.
