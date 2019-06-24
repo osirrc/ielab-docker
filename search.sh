@@ -11,6 +11,6 @@ TOP_K=$4
 # Perform the search.
 cat ${TOPIC_PATH} | ./ielab_tsearcher ${INDEX} ${TOPIC_FORMAT} ${TOP_K} > output/${INDEX}-${TOP_K}.run
 
-#echo "############### BEGIN ELASTICSEARCH LOGS ###############"
-#cat /elasticsearch/logs/elasticsearch.log
-#echo "###############  END ELASTICSEARCH LOGS  ###############"
+echo "############### BEGIN ELASTICSEARCH LOGS ###############"
+cat /elasticsearch/logs/elasticsearch.log
+echo "###############  END ELASTICSEARCH LOGS  ###############"
