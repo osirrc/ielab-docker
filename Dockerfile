@@ -9,7 +9,7 @@ RUN apt-get update -y -q && \
 RUN DEBIAN_FRONTEND=noninteractive apt-get install --fix-missing --no-install-recommends -y -q curl build-essential ca-certificates git
 
 # Download Go 1.2.2 and install it to /usr/local/go.
-RUN curl -s https://storage.googleapis.com/golang/go1.12.linux-amd64.tar.gz | tar -v -C /usr/local -xz
+RUN curl -s https://storage.googleapis.com/golang/go1.12.linux-amd64.tar.gz | tar -C /usr/local -xz
 
 # Lets people find our Go binaries.
 ENV PATH $PATH:/usr/local/go/bin

@@ -6,7 +6,7 @@ This is the docker image for Elasticsearch conforming to the OSIRRC jig for the 
 
 Currently supported:
 
- - test collections: `core17`, `core18`, `cw12b`, `robust04` 
+ - test collections: `core18`, `robust04`, (`cw12b` should work but is untested, still working on `core17`) 
  - hooks: `init`, `index`, `search`
  
 ## Quick Start
@@ -34,6 +34,50 @@ python run.py search \
 
 The container currently supports the default Elasticsearch implementattrecion of BM25. 
  
+## Expected Results
+
+### robust04
+
+| MAP                                   | BM25   |
+:---------------------------------------|--------|
+| TREC 2004 Robust Track Topics         | 0.1826 |
+
+#### prepare
+
+`python3 run.py prepare --repo ielab --collections robust04=/path/to/disk45=trectext`
+
+#### search
+
+`python3 run.py search --repo ielab --qrels qrels/qrels.robust04.txt --topic topics/topics.robust04.txt --collection robust04 --output output/ielab`
+
+### core17
+
+_Working on document parser_
+
+### core18
+
+_Currently running experiments_
+
+#### prepare
+
+`python3 run.py prepare --repo ielab --collections core18=/path/to/wp=wp`
+
+#### search
+
+`python3 run.py search --repo ielab --qrels qrels/qrels.core18.txt --topic topics/topics.core18.txt --collection core18 --output output/ielab`
+
+### cw12b
+
+_Need to run experiments_
+
+#### prepare
+
+`python3 run.py prepare --repo ielab --collections cw12b=/path/to/cw12b=warc`
+
+#### search
+
+`python3 run.py search --repo ielab --qrels qrels/qrels.web-n.txt --topic topics/topics.web-n.txt --collection cw12b --output output/ielab`
+
 ## Implementation
 
 ### Dockerfile

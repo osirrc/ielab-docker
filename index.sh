@@ -37,18 +37,22 @@ then
     # Decompress.
     echo "robust04 ... Uncompressing"
     gunzip --suffix=".z" -r ${COLLECTION_PATH_WRITABLE}
+    echo "done!"
 fi
 
 if [[ ${INDEX} == "core17" ]]
 then
-    rm -r ${COLLECTION_PATH_WRITABLE}/NYTcorpus/docs
-    rm -r ${COLLECTION_PATH_WRITABLE}/NYTcorpus/dtd
-    rm -r ${COLLECTION_PATH_WRITABLE}/NYTcorpus/tools
-    rm ${COLLECTION_PATH_WRITABLE}/NYTcorpus/index.html
+    rm -r ${COLLECTION_PATH_WRITABLE}/docs
+    rm -r ${COLLECTION_PATH_WRITABLE}/dtd
+    rm -r ${COLLECTION_PATH_WRITABLE}/tools
+    rm ${COLLECTION_PATH_WRITABLE}/index.html
 
-    find ${COLLECTION_PATH_WRITABLE} -name "*.tgz" -type f -exec mv '{}' '{}'.z \;
+#    find ${COLLECTION_PATH_WRITABLE} -name "*.tgz" -type f -exec mv '{}' '{}'.z \;
     echo "core17 ... Uncompressing"
-    gunzip -v --suffix=".z" -r ${COLLECTION_PATH_WRITABLE}
+    gunzip --suffix=".tgz" -r ${COLLECTION_PATH_WRITABLE}
+    mkdir -p ../data
+    find ${COLLECTION_PATH_WRITABLE}/data -maxdepth 100 -type f -exec tar -xf '{}' -C ../data \;
+    echo "done!"
 fi
 
 if [[ ${INDEX} == "core18" ]]
@@ -60,7 +64,6 @@ then
     cd ${COLLECTION_PATH_WRITABLE}/data/
     split -l 1 TREC_Washington_Post_collection.v2.jl
     rm ${COLLECTION_PATH_WRITABLE}/data/TREC_Washington_Post_collection.v2.jl
-    ls ${COLLECTION_PATH_WRITABLE}/data
     cd /
 fi
 
