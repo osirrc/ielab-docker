@@ -35,7 +35,7 @@ then
     find ${COLLECTION_PATH_WRITABLE} -maxdepth 100 -name "*.1z" -type f -exec mv '{}' '{}'.z \;
     find ${COLLECTION_PATH_WRITABLE} -maxdepth 100 -name "*.2z" -type f -exec mv '{}' '{}'.z \;
     # Decompress.
-    echo "robust04 ... Uncompressing"
+    echo "robust04 ... decompressing"
     gunzip --suffix=".z" -r ${COLLECTION_PATH_WRITABLE}
     echo "done!"
 fi
@@ -48,10 +48,11 @@ then
     rm ${COLLECTION_PATH_WRITABLE}/index.html
 
 #    find ${COLLECTION_PATH_WRITABLE} -name "*.tgz" -type f -exec mv '{}' '{}'.z \;
-    echo "core17 ... Uncompressing"
+    echo "core17 ... decompressing"
     gunzip --suffix=".tgz" -r ${COLLECTION_PATH_WRITABLE}
-    mkdir -p ../data
-    find ${COLLECTION_PATH_WRITABLE}/data -maxdepth 100 -type f -exec tar -xf '{}' -C ../data \;
+    mkdir -p ${COLLECTION_PATH_WRITABLE}/decompressed
+    find ${COLLECTION_PATH_WRITABLE}/data -maxdepth 100 -type f -exec tar -xf '{}' -C ${COLLECTION_PATH_WRITABLE}/decompressed \;
+    rm -rf ${COLLECTION_PATH_WRITABLE}/data
     echo "done!"
 fi
 
@@ -93,7 +94,10 @@ for filename in $(find ${COLLECTION_PATH_WRITABLE} -type f); do
         then
             # Can't index the file, so what's the error?
             printf "[X]\n"
+            echo "###### REESPONSE: ######"
             cat resp; echo
+            echo "###### REQUEST:   ######"
+            cat requests; echo
         else
             # Okay, great, we indexed the file.
             printf "[√]\n"

@@ -40,6 +40,7 @@ const (
 	TRECTEXT                  = "trectext"
 	WashPost                  = "wp"
 	WARC                      = "warc"
+	NYT                       = "nyt"
 )
 
 type TRECWEBDoc struct {
@@ -91,6 +92,21 @@ type WaPostArticle struct {
 		Role        string      `json:"role"`
 		Bio         string      `json:"bio"`
 	} `json:"contents"`
+}
+
+type NYTArticle struct {
+	XMLName xml.Name `xml:"nitf"`
+	Head    struct {
+		Title   string `xml:"title"`
+		DocData struct {
+			DocId struct {
+				ID string `xml:"id-string,attr"`
+			} `xml:"doc-id"`
+		} `xml:"docdata"`
+	} `xml:"head"`
+	Body struct {
+		Value string `xml:",innerxml"`
+	} `xml:"body"`
 }
 
 type CollectionParser func(r io.Reader) ([]byte, error)
@@ -184,7 +200,7 @@ func ParseWARC(r io.Reader) ([][]byte, []string, error) {
 	for i, rec := range records {
 		buff := new(bytes.Buffer)
 		j := struct {
-			DocNo string `json:"_id"`
+			DocNo string
 			Text  string
 		}{
 			DocNo: strings.TrimSpace(rec.Headers.Get("WARC-TREC-ID")),
@@ -199,6 +215,34 @@ func ParseWARC(r io.Reader) ([][]byte, []string, error) {
 	}
 
 	return recs, ids, nil
+}
+
+func ParseNYT(r io.Reader) ([]byte, string, error) {
+	var (
+		d    NYTArticle
+		buff = new(bytes.Buffer)
+	)
+	err := xml.NewDecoder(r).Decode(&d)
+	if err != nil {
+		return nil, "", err
+	}
+
+	j := struct {
+		DocNo string `json:"id"`
+		Title string `json:"title"`
+		Text  string `json:"text"`
+	}{
+		DocNo: d.Head.DocData.DocId.ID,
+		Title: d.Head.Title,
+		Text:  d.Body.Value,
+	}
+
+	err = json.NewEncoder(buff).Encode(&j)
+	if err != nil {
+		return nil, "", err
+	}
+
+	return buff.Bytes(), j.DocNo, nil
 }
 
 func ParseJSON(r io.Reader) ([]byte, error) {
@@ -226,15 +270,8 @@ func main() {
 
 	// Determine the parser for collections to use.
 	format = CollectionFormat(os.Args[2])
-	switch format {
-	case TRECWEB:
-	case TRECTEXT:
-	case WashPost:
-	case WARC:
-	default:
-		log.Fatalln(fmt.Sprintf("%s is not a valid collection format", format))
-	}
 
+	// Standard trec collection files (e.g., robust04)
 	if format == TRECTEXT || format == TRECWEB {
 		parser := ParseTRECWEB
 
@@ -268,6 +305,7 @@ func main() {
 				}
 			}
 		}
+		// Washington Post (core18)
 	} else if format == WashPost {
 		data, id, err := ParseWP(os.Stdin)
 		if err != nil {
@@ -278,6 +316,7 @@ func main() {
 		if err != nil {
 			log.Fatalln(err)
 		}
+		// WARC (ClueWeb 12)
 	} else if format == WARC {
 		records, ids, err := ParseWARC(os.Stdin)
 		if err != nil {
@@ -290,5 +329,18 @@ func main() {
 				log.Fatalln(err)
 			}
 		}
+		// NYT (core17)
+	} else if format == NYT {
+		data, id, err := ParseNYT(os.Stdin)
+		if err != nil {
+			log.Fatalln(err)
+		}
+		_, err = os.Stdout.WriteString(fmt.Sprintf(`{ "index": { "_index": "%s", "_id": "%s"  } }
+%s`, collectionName, id, data))
+		if err != nil {
+			log.Fatalln(err)
+		}
+	} else {
+		log.Fatalf("%s is not a known collection format\n", format)
 	}
 }
