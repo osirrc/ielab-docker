@@ -56,7 +56,9 @@ _Working on document parser_
 
 ### core18
 
-_Currently running experiments_
+| MAP                                   | BM25   |
+:---------------------------------------|--------|
+| TREC 2018 Common Core Track Topics    | 0.1899 |
 
 #### prepare
 
