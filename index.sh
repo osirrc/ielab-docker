@@ -6,6 +6,8 @@ INDEX=$2
 COLLECTION_FORMAT=$3
 
 
+BULK_SIZE=1000
+
 # Portions of this code copied from https://github.com/osirrc/indri-docker.
 
 # The mounted collection folder is read-only, we need a writable folder.
@@ -14,8 +16,10 @@ echo "copying files of directory ${COLLECTION_PATH} into ${COLLECTION_PATH_WRITA
 cp -r ${COLLECTION_PATH} ${COLLECTION_PATH_WRITABLE}
 echo "done!"
 
+
 if [[ ${INDEX} == "robust04" ]]
 then
+    BULK_SIZE=10
     # Remove the unwanted parts of disk45 (as per ROBUST04 guidelines)
     rm -r ${COLLECTION_PATH_WRITABLE}/disk4/cr
     rm -r ${COLLECTION_PATH_WRITABLE}/disk4/dtds
@@ -74,39 +78,50 @@ fi
 
 # Create the index.
 curl -s -H "Content-Type: application/json" -X PUT localhost:9200/${INDEX}?wait_for_active_shards=1 -d '{"settings": {"number_of_shards": 4}}'; echo
-
 curl -s -H 'Content-Type: application/json' -X PUT localhost:9200/_settings -d '{ "index": { "refresh_interval": "60s"}}'; echo
 
-# Iterate over each file in the collection path, parsing each
-# one as it sees it, then bulk indexing the file.
-for filename in $(find ${COLLECTION_PATH_WRITABLE} -type f); do
-    printf ${filename}
-    # Try to parse the file.
-    cat ${filename} | ./ielab_cparser ${INDEX} ${COLLECTION_FORMAT} trecweb > requests
-    if [[ ! -e requests ]]
+
+function do_request {
+    # We have a parsed file, now try to index it.
+    STATUS=$(curl -s -w "%{http_code}" -o resp -H "Content-Type: application/x-ndjson" -X POST localhost:9200/${INDEX}/_bulk --data-binary "@requests")
+    if [[ ${STATUS} != 200 ]]
     then
-        # We were unable to parse the file...
+        # Can't index the file, so what's the error?
         printf "[X]\n"
+        echo "###### RESPONSE: ######"
+        cat resp; echo
     else
-        # We have a parsed file, now try to index it.
-        STATUS=$(curl -s -w "%{http_code}" -o resp -H "Content-Type: application/x-ndjson" -X POST localhost:9200/${INDEX}/_bulk --data-binary "@requests")
-        if [[ ${STATUS} != 200 ]]
-        then
-            # Can't index the file, so what's the error?
-            printf "[X]\n"
-            echo "###### REESPONSE: ######"
-            cat resp; echo
-            echo "###### REQUEST:   ######"
-            cat requests; echo
-        else
-            # Okay, great, we indexed the file.
-            printf "[√]\n"
-        fi
+        # Okay, great, we indexed the file.
+        printf "[√]\n"
     fi
 
     # Remove the requests file.
     [[ -e requests ]] && rm requests
+}
+# Iterate over each file in the collection path, parsing each
+# one as it sees it, then bulk indexing the file.
+I=0
+for filename in $(find ${COLLECTION_PATH_WRITABLE} -type f); do
+    echo "parsing ${filename} (${I}/${BULK_SIZE} for bulk index)"
+    # Try to parse the file.
+    cat ${filename} | ./ielab_cparser ${INDEX} ${COLLECTION_FORMAT} trecweb >> requests
+    if [[ ! -e requests ]]
+    then
+        # We were unable to parse the file...
+        printf "[X] - couldn't parse!\n"
+    elif (( I >= BULK_SIZE ))
+    then
+        do_request
+        I=0
+    fi
+    I=$((${I}+1))
 done
+
+if [[ $(wc -l requests) > 0 ]]
+then
+    echo "issuing remaining documents for bulk indexing"
+    do_request
+fi
 
 # Remove the resp file.
 [[ -e resp ]] && rm resp
