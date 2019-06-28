@@ -6,7 +6,7 @@ This is the docker image for Elasticsearch conforming to the OSIRRC jig for the 
 
 Currently supported:
 
- - test collections: `core18`, `robust04`, (`cw12b` should work but is untested, still working on `core17`) 
+ - test collections: `robust04`, `core17`, `core18`, (`cw12b` should work but is untested) 
  - hooks: `init`, `index`, `search`
  
 ## Quick Start
@@ -44,15 +44,26 @@ The container currently supports the default Elasticsearch implementattrecion of
 
 #### prepare
 
-`python3 run.py prepare --repo ielab --collections robust04=/path/to/disk45=trectext`
+`python3 run.py prepare --repo osirrc/ielab-docker --collections robust04=/path/to/disk45=trectext`
 
 #### search
 
-`python3 run.py search --repo ielab --qrels qrels/qrels.robust04.txt --topic topics/topics.robust04.txt --collection robust04 --output output/ielab`
+`python3 run.py search --repo osirrc/ielab-docker --qrels qrels/qrels.robust04.txt --topic topics/topics.robust04.txt --collection robust04 --output output/ielab`
 
 ### core17
 
-_Working on document parser_
+
+| MAP                                   | BM25   |
+:---------------------------------------|--------|
+| TREC 2017 Common Core Track Topics    | 0.0831 |
+
+#### prepare
+
+`python3 run.py prepare --repo osirrc/ielab-docker --collections core17=/path/to/NYTCorpus=nyt`
+
+#### search
+
+`python3 run.py search --repo osirrc/ielab-docker --qrels qrels/qrels.core17.txt --topic topics/topics.core17.txt --collection core17 --output output/ielab`
 
 ### core18
 
@@ -62,11 +73,11 @@ _Working on document parser_
 
 #### prepare
 
-`python3 run.py prepare --repo ielab --collections core18=/path/to/wp=wp`
+`python3 run.py prepare --repo osirrc/ielab-docker --collections core18=/path/to/WashingtonPost.v2=wp`
 
 #### search
 
-`python3 run.py search --repo ielab --qrels qrels/qrels.core18.txt --topic topics/topics.core18.txt --collection core18 --output output/ielab`
+`python3 run.py search --repo osirrc/ielab-docker --qrels qrels/qrels.core18.txt --topic topics/topics.core18.txt --collection core18 --output output/ielab`
 
 ### cw12b
 
@@ -74,11 +85,11 @@ _Need to run experiments_
 
 #### prepare
 
-`python3 run.py prepare --repo ielab --collections cw12b=/path/to/cw12b=warc`
+`python3 run.py prepare --repo osirrc/ielab-docker --collections cw12b=/path/to/cw12b=warc`
 
 #### search
 
-`python3 run.py search --repo ielab --qrels qrels/qrels.web-n.txt --topic topics/topics.web-n.txt --collection cw12b --output output/ielab`
+`python3 run.py search --repo osirrc/ielab-docker --qrels qrels/qrels.web-n.txt --topic topics/topics.web-n.txt --collection cw12b --output output/ielab`
 
 ## Implementation
 
