@@ -5,6 +5,9 @@ COLLECTION_PATH=$1
 INDEX=$2
 COLLECTION_FORMAT=$3
 
+
+BULK_SIZE=1000
+
 # Portions of this code copied from https://github.com/osirrc/indri-docker.
 
 # The mounted collection folder is read-only, we need a writable folder.
@@ -13,8 +16,10 @@ echo "copying files of directory ${COLLECTION_PATH} into ${COLLECTION_PATH_WRITA
 cp -r ${COLLECTION_PATH} ${COLLECTION_PATH_WRITABLE}
 echo "done!"
 
+
 if [[ ${INDEX} == "robust04" ]]
 then
+    BULK_SIZE=10
     # Remove the unwanted parts of disk45 (as per ROBUST04 guidelines)
     rm -r ${COLLECTION_PATH_WRITABLE}/disk4/cr
     rm -r ${COLLECTION_PATH_WRITABLE}/disk4/dtds
@@ -85,8 +90,6 @@ function do_request {
         printf "[X]\n"
         echo "###### RESPONSE: ######"
         cat resp; echo
-        echo "###### REQUEST:  ######"
-        cat requests; echo
     else
         # Okay, great, we indexed the file.
         printf "[√]\n"
@@ -99,16 +102,15 @@ function do_request {
 # one as it sees it, then bulk indexing the file.
 I=0
 for filename in $(find ${COLLECTION_PATH_WRITABLE} -type f); do
-    echo ${filename}
+    echo "parsing ${filename} (${I}/${BULK_SIZE} for bulk index)"
     # Try to parse the file.
     cat ${filename} | ./ielab_cparser ${INDEX} ${COLLECTION_FORMAT} trecweb >> requests
     if [[ ! -e requests ]]
     then
         # We were unable to parse the file...
         printf "[X] - couldn't parse!\n"
-    elif (( I > 1000 ))
+    elif (( I >= BULK_SIZE ))
     then
-        echo ${I}
         do_request
         I=0
     fi
@@ -117,6 +119,7 @@ done
 
 if [[ $(wc -l requests) > 0 ]]
 then
+    echo "issuing remaining documents for bulk indexing"
     do_request
 fi
 
